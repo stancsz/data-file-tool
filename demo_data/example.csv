@@ -1,0 +1,5 @@
+OrderID,Restaurant,Customer,DeliveryStatus,TotalAmount
+1001,Joe's Pizza,Alice,Completed,20.5
+1002,Mary's Sushi,Bob,In Progress,30.75
+1003,Indian Spice,Charlie,Cancelled,15.9
+1004,Healthy Greens,David,Completed,25.4
