@@ -12,19 +12,29 @@
 <body>
   <div class="container">
     <h1>Data File and SQL Query Tool</h1>
-  
-  <p>
-    This tool allows you to load data files in CSV or JSONL format and run SQL queries on them. 
-    You can also view a schema that's compatible with BigQuery. 
-  </p>
-  <p>
-    <strong>How to use:</strong><br>
-    1. Select your data file and its type (CSV or JSONL).<br>
-    2. Click 'Load' to preview the data and see the schema.<br>
-    3. Enter your SQL query and click 'Run Query'.<br>
-    4. Results will show below. You can save them in CSV or JSONL.<br>
-    5. To copy the schema, click 'Copy Schema to Clipboard'.
-  </p>
+
+    <p>
+      This tool allows you to load data files in CSV or JSONL format and run SQL queries on them.
+      You can also view a schema that's compatible with BigQuery.
+    </p>
+    <p>
+      <strong>How to use:</strong><br>
+      1. Select your data file and its type (CSV or JSONL).<br>
+      2. Click 'Load' to preview the data and see the schema.<br>
+      3. Enter your SQL query and click 'Run Query'.<br>
+      4. Results will show below. You can save them in CSV or JSONL.<br>
+      5. To copy the schema, click 'Copy Schema to Clipboard'.
+    </p>
+    <p>
+      Just checking this tool out? Here are two example files you can use to try it out:
+    </p>
+    <ul>
+      <li><a href="https://raw.githubusercontent.com/stancsz/data-file-tool/main/demo_data/example.jsonl"
+          target="_blank" rel="noopener noreferrer">Example JSONL file</a> (Right-click and choose "Save link as")</li>
+      <li><a href="https://raw.githubusercontent.com/stancsz/data-file-tool/main/demo_data/example.csv" target="_blank"
+          rel="noopener noreferrer">Example CSV file</a> (Right-click and choose "Save link as")</li>
+    </ul>
+
     <div class="form-group">
       <input type="file" id="csvFile" class="form-control" />
       <select id="fileType" class="form-control mt-2">
@@ -240,38 +250,38 @@
     }
 
     function copySchema() {
-    // Copy schema to clipboard (BigQuery compatible)
-    navigator.clipboard.writeText(JSON.stringify(bigQuerySchema)).then(() => {
-      alert('Schema copied to clipboard');
-    }).catch(err => {
-      alert('Failed to copy schema: ' + err);
-    });
-  }
-  
-  function generateSchema(firstRow) {
-    bigQuerySchema = Object.keys(firstRow).map(key => {
-      return {
-        "name": key,
-        "type": guessType(firstRow[key]).type,
-        "mode": "NULLABLE"  // Add this for BigQuery compatibility
-      };
-    });
-    
-    // Display schema as a table
-    displaySchemaTable();
-  }
+      // Copy schema to clipboard (BigQuery compatible)
+      navigator.clipboard.writeText(JSON.stringify(bigQuerySchema)).then(() => {
+        alert('Schema copied to clipboard');
+      }).catch(err => {
+        alert('Failed to copy schema: ' + err);
+      });
+    }
 
-  function displaySchemaTable() {
-    let table = '<table class="table table-bordered">';
-    table += "<thead><tr><th>Name</th><th>Type</th><th>Mode</th></tr></thead><tbody>";
-    
-    bigQuerySchema.forEach(field => {
-      table += `<tr><td>${field.name}</td><td>${field.type}</td><td>${field.mode}</td></tr>`;
-    });
-    
-    table += "</tbody></table>";
-    document.getElementById('schemaTable').innerHTML = table;
-  }
+    function generateSchema(firstRow) {
+      bigQuerySchema = Object.keys(firstRow).map(key => {
+        return {
+          "name": key,
+          "type": guessType(firstRow[key]).type,
+          "mode": "NULLABLE"  // Add this for BigQuery compatibility
+        };
+      });
+
+      // Display schema as a table
+      displaySchemaTable();
+    }
+
+    function displaySchemaTable() {
+      let table = '<table class="table table-bordered">';
+      table += "<thead><tr><th>Name</th><th>Type</th><th>Mode</th></tr></thead><tbody>";
+
+      bigQuerySchema.forEach(field => {
+        table += `<tr><td>${field.name}</td><td>${field.type}</td><td>${field.mode}</td></tr>`;
+      });
+
+      table += "</tbody></table>";
+      document.getElementById('schemaTable').innerHTML = table;
+    }
 
 
 
