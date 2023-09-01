@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Data File and SQL Query Tool</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/alasql/0.4.11/alasql.min.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Data File and SQL Query Tool</h1>
+  
+  <p>
+    This tool allows you to load data files in CSV or JSONL format and run SQL queries on them. 
+    You can also view a schema that's compatible with BigQuery. 
+  </p>
+  <p>
+    <strong>How to use:</strong><br>
+    1. Select your data file and its type (CSV or JSONL).<br>
+    2. Click 'Load' to preview the data and see the schema.<br>
+    3. Enter your SQL query and click 'Run Query'.<br>
+    4. Results will show below. You can save them in CSV or JSONL.<br>
+    5. To copy the schema, click 'Copy Schema to Clipboard'.
+  </p>
+    <div class="form-group">
+      <input type="file" id="csvFile" class="form-control" />
+      <select id="fileType" class="form-control mt-2">
+        <option value="csv">CSV</option>
+        <option value="jsonl">JSONL</option>
+      </select>
+    </div>
+    <button onclick="loadData()" class="btn btn-primary">Load</button>
+    <h3>Data Preview</h3>
+
+    <div id="preview" class="mt-3"></div>
+    <h3>Schema (BigQuery Compatible)</h3>
+
+    <div id="schemaTable" class="mt-3"></div>
+    <button onclick="copySchema()" class="btn btn-secondary mt-2">Copy Schema to Clipboard</button>
+
+
+    <div class="form-group mt-3">
+      <label for="sqlQuery">SQL Query:</label>
+      <textarea id="sqlQuery" class="form-control" placeholder="Enter SQL query here"></textarea>
+    </div>
+    <button onclick="runQuery()" class="btn btn-primary">Run Query</button>
+    <div id="result" class="mt-3"></div>
+    <button onclick="saveAsCSV()" class="btn btn-secondary mt-2">Save as CSV</button>
+    <button onclick="saveAsJSONL()" class="btn btn-secondary mt-2">Save as JSONL</button>
+    <h2>Example SQL Queries</h2>
+    <p>SELECT * FROM ?</p>
+    <p>SELECT column1, column2 FROM ? WHERE column3 = 'value'</p>
+    <p>SELECT COUNT(*) FROM ?</p>
+  </div>
+
+  <script>
+    let db = [];
+    let bigQuerySchema = [];
+    let lastQueryResult = [];  // Define this variable
+
+
+    function guessType(value) {
+      if (typeof value === 'number') return { type: 'NUMERIC' };
+      if (typeof value === 'boolean') return { type: 'BOOLEAN' };
+      if (typeof value === 'string') return { type: 'STRING' };
+      return { type: 'STRING' }; // Default
+    }
+
+    function generateSchema(firstRow) {
+      bigQuerySchema = Object.keys(firstRow).map(key => {
+        return {
+          name: key,
+          ...guessType(firstRow[key])
+        };
+      });
+      document.getElementById('schema').value = JSON.stringify(bigQuerySchema, null, 2);
+    }
+
+    function copySchema() {
+      const schemaText = document.getElementById('schema').value;
+      navigator.clipboard.writeText(schemaText).then(() => {
+        alert('Schema copied to clipboard');
+      }).catch(err => {
+        alert('Failed to copy schema: ' + err);
+      });
+    }
+
+    function loadData() {
+      let fileInput = document.getElementById('csvFile');
+      let fileType = document.getElementById('fileType').value;
+      let file = fileInput.files[0];
+
+      if (file) {
+        let reader = new FileReader();
+
+        reader.onerror = function (event) {
+          console.error("File could not be read! Code " + event.target.error.code);
+        };
+
+        reader.onload = function (event) {
+          let text = event.target.result;
+
+          if (fileType === 'csv') {
+            Papa.parse(text, {
+              header: true,
+              dynamicTyping: true,
+              complete: function (results) {
+                if (results && results.data) {
+                  db = results.data.map(row => {
+                    Object.keys(row).forEach(key => {
+                      if (row[key] === null || row[key] === undefined) {
+                        row[key] = '';
+                      }
+                    });
+                    return row;
+                  });
+                  console.log("CSV data loaded", db);
+                  previewData();
+                  generateSchema(db[0]);
+                }
+              }
+            });
+          } else if (fileType === 'jsonl') {
+            db = text.split('\n').filter(line => line.trim() !== '').map(line => {
+              try {
+                let json = JSON.parse(line);
+                Object.keys(json).forEach(key => {
+                  if (json[key] === null || json[key] === undefined) {
+                    json[key] = '';
+                  }
+                });
+                return json;
+              } catch (e) {
+                console.log("JSON parse error on line:", line);
+                return null;
+              }
+            });
+            console.log("JSONL data loaded", db);
+            previewData();
+            generateSchema(db[0]);
+          }
+        };
+        reader.readAsText(file);
+      } else {
+        alert('No file selected.');
+      }
+    }
+
+
+
+    function runQuery() {
+      let sql = document.getElementById('sqlQuery').value;
+      if (sql && db.length > 0) {
+        let res = alasql(sql, [db]);
+
+        // Show result as a table
+        let table = '<table class="table table-bordered">';
+        let keys = Object.keys(res[0]);
+        table += "<thead><tr>";
+        keys.forEach(key => table += `<th>${key}</th>`);
+        table += "</tr></thead><tbody>";
+        res.forEach(row => {
+          table += "<tr>";
+          keys.forEach(key => table += `<td>${row[key]}</td>`);
+          table += "</tr>";
+        });
+        table += "</tbody></table>";
+        document.getElementById('result').innerHTML = table;
+
+        // Store the result for download
+        lastQueryResult = res;
+      } else {
+        document.getElementById('result').innerText = "No data or query to run.";
+      }
+    }
+
+    function saveAsCSV() {
+      let csv = Papa.unparse(lastQueryResult);
+      downloadFile(csv, 'result.csv');
+    }
+
+    function saveAsJSONL() {
+      let jsonl = lastQueryResult.map(row => JSON.stringify(row)).join('\n');
+      downloadFile(jsonl, 'result.jsonl');
+    }
+
+    function downloadFile(content, filename) {
+      let blob = new Blob([content], { type: 'text/plain' });
+      let link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+    }
+
+    function previewData() {
+      let table = '<table class="table table-bordered">';
+      let keys = Object.keys(db[0]);
+      table += "<thead><tr>";
+      keys.forEach(key => table += `<th>${key}</th>`);
+      table += "</tr></thead><tbody>";
+
+      // Limit to 10 rows for preview
+      db.slice(0, 10).forEach(row => {
+        table += "<tr>";
+        keys.forEach(key => table += `<td>${row[key]}</td>`);
+        table += "</tr>";
+      });
+
+      table += "</tbody></table>";
+      document.getElementById('preview').innerHTML = table;
+    }
+
+    function guessType(value) {
+      if (Number.isInteger(value)) return { type: 'INTEGER' };
+      if (!isNaN(parseFloat(value))) return { type: 'FLOAT' };
+      if (typeof value === 'boolean') return { type: 'BOOLEAN' };
+      if (typeof value === 'string') {
+        // Basic check for timestamp format (you can make this more robust)
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value)) {
+          return { type: 'TIMESTAMP' };
+        }
+        return { type: 'STRING' };
+      }
+      if (Array.isArray(value)) {
+        return { type: 'ARRAY', items: { type: 'STRING' } };  // Make this more specific
+      }
+      return { type: 'STRING' }; // Default
+    }
+
+    function copySchema() {
+      const schemaText = JSON.stringify(bigQuerySchema, null, 2);
+      navigator.clipboard.writeText(schemaText).then(() => {
+        alert('Schema copied to clipboard');
+      }).catch(err => {
+        alert('Failed to copy schema: ' + err);
+      });
+    }
+
+    function copySchema() {
+    // Copy schema to clipboard (BigQuery compatible)
+    navigator.clipboard.writeText(JSON.stringify(bigQuerySchema)).then(() => {
+      alert('Schema copied to clipboard');
+    }).catch(err => {
+      alert('Failed to copy schema: ' + err);
+    });
+  }
+  
+  function generateSchema(firstRow) {
+    bigQuerySchema = Object.keys(firstRow).map(key => {
+      return {
+        "name": key,
+        "type": guessType(firstRow[key]).type,
+        "mode": "NULLABLE"  // Add this for BigQuery compatibility
+      };
+    });
+    
+    // Display schema as a table
+    displaySchemaTable();
+  }
+
+  function displaySchemaTable() {
+    let table = '<table class="table table-bordered">';
+    table += "<thead><tr><th>Name</th><th>Type</th><th>Mode</th></tr></thead><tbody>";
+    
+    bigQuerySchema.forEach(field => {
+      table += `<tr><td>${field.name}</td><td>${field.type}</td><td>${field.mode}</td></tr>`;
+    });
+    
+    table += "</tbody></table>";
+    document.getElementById('schemaTable').innerHTML = table;
+  }
+
+
+
+
+  </script>
+
+</body>
+
+</html>
