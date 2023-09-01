@@ -1,0 +1,4 @@
+{"OrderID": 1001, "Restaurant": "Joe's Pizza", "Customer": "Alice", "DeliveryStatus": "Completed", "TotalAmount": 20.5}
+{"OrderID": 1002, "Restaurant": "Mary's Sushi", "Customer": "Bob", "DeliveryStatus": "In Progress", "TotalAmount": 30.75}
+{"OrderID": 1003, "Restaurant": "Indian Spice", "Customer": "Charlie", "DeliveryStatus": "Cancelled", "TotalAmount": 15.9}
+{"OrderID": 1004, "Restaurant": "Healthy Greens", "Customer": "David", "DeliveryStatus": "Completed", "TotalAmount": 25.4}
