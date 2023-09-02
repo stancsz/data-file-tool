@@ -6,7 +6,7 @@ This tool allows you to upload and preview data files in CSV or JSONL formats. A
 
 ## Deployed App
 
-You can see the deployed app here: [Data File and SQL Query Tool](https://github.com/stancsz/data-file-tool)
+You can see the deployed app here: [Data File and SQL Query Tool]([https://github.com/stancsz/data-file-tool](https://stancsz.github.io/data-file-tool/))
 
 ## How to Use
 
